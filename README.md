@@ -99,10 +99,12 @@ docker compose up -d --build
 | Notifications.Api | `/notifications/api/notifications` | `:8083/api/notifications` |
 | Reviews.Api | `/reviews/api/reviews` | `:8084/api/reviews` |
 
-- **Catalog:** `GET /api/products`, `GET /api/products/{id}`, `POST /api/products`
-- **Orders:** `GET /api/orders`, `GET /api/orders/{id}`, `POST /api/orders` (тіло: `{"items":[{"productId":"...","quantity":2}]}`) — публікує подію, яку забирають Catalog і Notifications
+- **Catalog:** `GET /api/products`, `GET /api/products/{id}`, `POST /api/products` (400 при від'ємній ціні/залишку чи порожній назві)
+- **Orders:** `GET /api/orders`, `GET /api/orders/{id}`, `POST /api/orders` (тіло: `{"items":[{"productId":"...","quantity":2}]}`, 400 при `quantity <= 0` чи порожньому `productId`) — публікує подію, яку забирають Catalog і Notifications
 - **Notifications:** `GET /api/notifications`, `GET /api/notifications/{id}` (лише читання — записи створюються консюмером)
-- **Reviews:** `GET /api/reviews`, `GET /api/reviews/product/{productId}`, `POST /api/reviews` (тіло: `{"productId":"...","rating":1-5,"comment":"..."}`)
+- **Reviews:** `GET /api/reviews`, `GET /api/reviews/product/{productId}`, `GET /api/reviews/product/{productId}/summary` (кількість відгуків + середній рейтинг), `POST /api/reviews` (тіло: `{"productId":"...","rating":1-5,"comment":"..."}`, 400 при рейтингу поза 1-5)
+
+Кожен `POST`-ендпоінт валідує вхідні дані на рівні сервісу й повертає `400 Bad Request` з описом помилки замість необробленого винятку. `GET /health` на кожному сервісі реально перевіряє з'єднання з його БД (`AddDbContextCheck`), а не просто повертає статичний "healthy".
 
 ## Локальний запуск без Docker
 

@@ -34,6 +34,21 @@ public class ProductService(CatalogDbContext db, IDistributedCache cache) : IPro
 
     public async Task<Product> CreateAsync(Product product, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(product.Name))
+        {
+            throw new ArgumentException("Product name is required.");
+        }
+
+        if (product.Price < 0)
+        {
+            throw new ArgumentException("Price cannot be negative.");
+        }
+
+        if (product.Stock < 0)
+        {
+            throw new ArgumentException("Stock cannot be negative.");
+        }
+
         db.Products.Add(product);
         await db.SaveChangesAsync(ct);
         await cache.RemoveAsync(AllProductsCacheKey, ct);

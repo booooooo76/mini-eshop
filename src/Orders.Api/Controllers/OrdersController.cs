@@ -22,7 +22,14 @@ public class OrdersController(IOrderService orders) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Order>> Create(CreateOrderRequest request, CancellationToken ct)
     {
-        var order = await orders.CreateAsync(request, ct);
-        return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
+        try
+        {
+            var order = await orders.CreateAsync(request, ct);
+            return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

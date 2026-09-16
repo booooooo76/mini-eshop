@@ -37,6 +37,26 @@ public class ProductServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_WithNegativePrice_Throws()
+    {
+        var (db, cache) = CreateDependencies(nameof(CreateAsync_WithNegativePrice_Throws));
+        var service = new ProductService(db, cache);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(new Product { Name = "Bad", Price = -1m, Stock = 1 }));
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithEmptyName_Throws()
+    {
+        var (db, cache) = CreateDependencies(nameof(CreateAsync_WithEmptyName_Throws));
+        var service = new ProductService(db, cache);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(new Product { Name = "  ", Price = 1m, Stock = 1 }));
+    }
+
+    [Fact]
     public async Task DecreaseStockAsync_NeverGoesBelowZero()
     {
         var (db, cache) = CreateDependencies(nameof(DecreaseStockAsync_NeverGoesBelowZero));

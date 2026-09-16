@@ -31,4 +31,20 @@ public class ReviewsControllerTests(ReviewsWebApplicationFactory factory) : ICla
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetSummary_ReturnsAverageRating()
+    {
+        var client = factory.CreateClient();
+        var productId = Guid.NewGuid();
+        await client.PostAsJsonAsync("/api/reviews", new CreateReviewRequest(productId, 4, "Good"));
+        await client.PostAsJsonAsync("/api/reviews", new CreateReviewRequest(productId, 2, "Meh"));
+
+        var response = await client.GetAsync($"/api/reviews/product/{productId}/summary");
+
+        response.EnsureSuccessStatusCode();
+        var summary = await response.Content.ReadFromJsonAsync<ProductRatingSummary>();
+        Assert.Equal(2, summary!.ReviewCount);
+        Assert.Equal(3, summary.AverageRating);
+    }
 }

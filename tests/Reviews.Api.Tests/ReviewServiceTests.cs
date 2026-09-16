@@ -41,4 +41,41 @@ public class ReviewServiceTests
         await Assert.ThrowsAsync<ArgumentException>(() =>
             service.CreateAsync(new CreateReviewRequest(Guid.NewGuid(), rating, "bad")));
     }
+
+    [Fact]
+    public async Task CreateAsync_WithEmptyProductId_Throws()
+    {
+        var db = CreateDb(nameof(CreateAsync_WithEmptyProductId_Throws));
+        var service = new ReviewService(db);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(new CreateReviewRequest(Guid.Empty, 5, "bad")));
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_ComputesAverageAndCount()
+    {
+        var db = CreateDb(nameof(GetSummaryAsync_ComputesAverageAndCount));
+        var service = new ReviewService(db);
+        var productId = Guid.NewGuid();
+        await service.CreateAsync(new CreateReviewRequest(productId, 4, "Good"));
+        await service.CreateAsync(new CreateReviewRequest(productId, 2, "Meh"));
+
+        var summary = await service.GetSummaryAsync(productId);
+
+        Assert.Equal(2, summary.ReviewCount);
+        Assert.Equal(3, summary.AverageRating);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_WithNoReviews_ReturnsZero()
+    {
+        var db = CreateDb(nameof(GetSummaryAsync_WithNoReviews_ReturnsZero));
+        var service = new ReviewService(db);
+
+        var summary = await service.GetSummaryAsync(Guid.NewGuid());
+
+        Assert.Equal(0, summary.ReviewCount);
+        Assert.Equal(0, summary.AverageRating);
+    }
 }

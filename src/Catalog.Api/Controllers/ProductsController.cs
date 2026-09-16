@@ -22,7 +22,14 @@ public class ProductsController(IProductService products) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Product>> Create(Product product, CancellationToken ct)
     {
-        var created = await products.CreateAsync(product, ct);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        try
+        {
+            var created = await products.CreateAsync(product, ct);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 }

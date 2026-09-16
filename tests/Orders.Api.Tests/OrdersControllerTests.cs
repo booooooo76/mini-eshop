@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using Orders.Api.Models;
 using Xunit;
@@ -28,5 +29,27 @@ public class OrdersControllerTests(OrdersWebApplicationFactory factory) : IClass
         var response = await client.GetAsync("/api/orders");
 
         response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task Create_WithZeroQuantity_ReturnsBadRequest()
+    {
+        var client = factory.CreateClient();
+        var request = new CreateOrderRequest([new CreateOrderItem(Guid.NewGuid(), 0)]);
+
+        var response = await client.PostAsJsonAsync("/api/orders", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_WithNoItems_ReturnsBadRequest()
+    {
+        var client = factory.CreateClient();
+        var request = new CreateOrderRequest([]);
+
+        var response = await client.PostAsJsonAsync("/api/orders", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

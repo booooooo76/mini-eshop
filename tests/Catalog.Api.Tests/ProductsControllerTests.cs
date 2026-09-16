@@ -43,4 +43,15 @@ public class ProductsControllerTests(CatalogWebApplicationFactory factory) : ICl
         var getResponse = await client.GetAsync($"/api/products/{created!.Id}");
         getResponse.EnsureSuccessStatusCode();
     }
+
+    [Fact]
+    public async Task Create_WithNegativePrice_ReturnsBadRequest()
+    {
+        var client = factory.CreateClient();
+        var invalidProduct = new Product { Name = "Bad", Price = -5m, Stock = 1 };
+
+        var response = await client.PostAsJsonAsync("/api/products", invalidProduct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

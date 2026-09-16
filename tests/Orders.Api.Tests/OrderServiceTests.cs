@@ -39,4 +39,26 @@ public class OrderServiceTests
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(new CreateOrderRequest([])));
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task CreateAsync_WithNonPositiveQuantity_Throws(int quantity)
+    {
+        var db = CreateDb($"{nameof(CreateAsync_WithNonPositiveQuantity_Throws)}_{quantity}");
+        var service = new OrderService(db, new FakeOrderPublisher());
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(new CreateOrderRequest([new CreateOrderItem(Guid.NewGuid(), quantity)])));
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithEmptyProductId_Throws()
+    {
+        var db = CreateDb(nameof(CreateAsync_WithEmptyProductId_Throws));
+        var service = new OrderService(db, new FakeOrderPublisher());
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.CreateAsync(new CreateOrderRequest([new CreateOrderItem(Guid.Empty, 1)])));
+    }
 }

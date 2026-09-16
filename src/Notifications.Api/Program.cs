@@ -18,6 +18,9 @@ builder.Services.AddDbContext<NotificationsDbContext>(options =>
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddHostedService<OrderCreatedConsumer>();
 
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<NotificationsDbContext>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -35,7 +38,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapHealthChecks("/health");
 
 app.Run();
 

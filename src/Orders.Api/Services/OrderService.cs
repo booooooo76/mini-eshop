@@ -15,6 +15,19 @@ public class OrderService(OrdersDbContext db, IOrderPublisher publisher) : IOrde
             throw new ArgumentException("Order must contain at least one item.");
         }
 
+        foreach (var item in request.Items)
+        {
+            if (item.ProductId == Guid.Empty)
+            {
+                throw new ArgumentException("Each item must have a valid productId.");
+            }
+
+            if (item.Quantity <= 0)
+            {
+                throw new ArgumentException("Item quantity must be greater than zero.");
+            }
+        }
+
         var order = new Order
         {
             Items = request.Items.Select(i => new OrderItem { ProductId = i.ProductId, Quantity = i.Quantity }).ToList()

@@ -16,6 +16,9 @@ builder.Services.AddDbContext<ReviewsDbContext>(options =>
 
 builder.Services.AddScoped<IReviewService, ReviewService>();
 
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ReviewsDbContext>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -33,7 +36,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapHealthChecks("/health");
 
 app.Run();
 

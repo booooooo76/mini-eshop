@@ -16,6 +16,10 @@ public class ReviewsController(IReviewService reviews) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<Review>>> GetByProductId(Guid productId, CancellationToken ct) =>
         Ok(await reviews.GetByProductIdAsync(productId, ct));
 
+    [HttpGet("product/{productId:guid}/summary")]
+    public async Task<ActionResult<ProductRatingSummary>> GetSummary(Guid productId, CancellationToken ct) =>
+        Ok(await reviews.GetSummaryAsync(productId, ct));
+
     [HttpPost]
     public async Task<ActionResult<Review>> Create(CreateReviewRequest request, CancellationToken ct)
     {
