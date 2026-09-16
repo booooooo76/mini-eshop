@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Orders.Api.Data;
-using Orders.Api.Messaging;
-using Orders.Api.Services;
+using Reviews.Api.Data;
+using Reviews.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,17 +11,16 @@ builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
-builder.Services.AddDbContext<OrdersDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Orders")));
+builder.Services.AddDbContext<ReviewsDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Reviews")));
 
-builder.Services.AddSingleton<IOrderPublisher, RabbitMqOrderPublisher>();
-builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<OrdersDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<ReviewsDbContext>();
     db.Database.EnsureCreated();
 }
 
@@ -31,7 +29,7 @@ app.UseCors();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Orders.Api v1"));
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Reviews.Api v1"));
 }
 
 app.MapControllers();
