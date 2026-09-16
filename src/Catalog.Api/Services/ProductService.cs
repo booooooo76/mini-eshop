@@ -34,25 +34,64 @@ public class ProductService(CatalogDbContext db, IDistributedCache cache) : IPro
 
     public async Task<Product> CreateAsync(Product product, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(product.Name))
-        {
-            throw new ArgumentException("Product name is required.");
-        }
-
-        if (product.Price < 0)
-        {
-            throw new ArgumentException("Price cannot be negative.");
-        }
-
-        if (product.Stock < 0)
-        {
-            throw new ArgumentException("Stock cannot be negative.");
-        }
+        ValidateFields(product.Name, product.Price, product.Stock);
 
         db.Products.Add(product);
         await db.SaveChangesAsync(ct);
         await cache.RemoveAsync(AllProductsCacheKey, ct);
         return product;
+    }
+
+    public async Task<Product?> UpdateAsync(Guid id, UpdateProductRequest request, CancellationToken ct = default)
+    {
+        ValidateFields(request.Name, request.Price, request.Stock);
+
+        var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (product is null)
+        {
+            return null;
+        }
+
+        product.Name = request.Name;
+        product.Description = request.Description;
+        product.Price = request.Price;
+        product.Stock = request.Stock;
+
+        await db.SaveChangesAsync(ct);
+        await cache.RemoveAsync(AllProductsCacheKey, ct);
+        return product;
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var product = await db.Products.FirstOrDefaultAsync(p => p.Id == id, ct);
+        if (product is null)
+        {
+            return false;
+        }
+
+        db.Products.Remove(product);
+        await db.SaveChangesAsync(ct);
+        await cache.RemoveAsync(AllProductsCacheKey, ct);
+        return true;
+    }
+
+    private static void ValidateFields(string name, decimal price, int stock)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Product name is required.");
+        }
+
+        if (price < 0)
+        {
+            throw new ArgumentException("Price cannot be negative.");
+        }
+
+        if (stock < 0)
+        {
+            throw new ArgumentException("Stock cannot be negative.");
+        }
     }
 
     public async Task DecreaseStockAsync(Guid productId, int quantity, CancellationToken ct = default)

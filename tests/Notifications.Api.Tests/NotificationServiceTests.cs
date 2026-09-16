@@ -45,4 +45,42 @@ public class NotificationServiceTests
         Assert.Equal(second.Id, all[0].Id);
         Assert.Equal(first.Id, all[1].Id);
     }
+
+    [Fact]
+    public async Task MarkAsReadAsync_SetsIsRead()
+    {
+        var db = CreateDb(nameof(MarkAsReadAsync_SetsIsRead));
+        var service = new NotificationService(db);
+        var notification = await service.CreateFromOrderAsync(new OrderCreatedEvent(Guid.NewGuid(), DateTime.UtcNow, [new OrderCreatedItem(Guid.NewGuid(), 1)]));
+
+        var marked = await service.MarkAsReadAsync(notification.Id);
+
+        Assert.True(marked);
+        var stored = await service.GetByIdAsync(notification.Id);
+        Assert.True(stored!.IsRead);
+    }
+
+    [Fact]
+    public async Task MarkAsReadAsync_UnknownId_ReturnsFalse()
+    {
+        var db = CreateDb(nameof(MarkAsReadAsync_UnknownId_ReturnsFalse));
+        var service = new NotificationService(db);
+
+        var marked = await service.MarkAsReadAsync(Guid.NewGuid());
+
+        Assert.False(marked);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RemovesNotification()
+    {
+        var db = CreateDb(nameof(DeleteAsync_RemovesNotification));
+        var service = new NotificationService(db);
+        var notification = await service.CreateFromOrderAsync(new OrderCreatedEvent(Guid.NewGuid(), DateTime.UtcNow, [new OrderCreatedItem(Guid.NewGuid(), 1)]));
+
+        var deleted = await service.DeleteAsync(notification.Id);
+
+        Assert.True(deleted);
+        Assert.Null(await service.GetByIdAsync(notification.Id));
+    }
 }

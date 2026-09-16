@@ -54,4 +54,53 @@ public class ProductsControllerTests(CatalogWebApplicationFactory factory) : ICl
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Update_ThenGetById_ReturnsUpdatedProduct()
+    {
+        var client = factory.CreateClient();
+        var createResponse = await client.PostAsJsonAsync("/api/products", new Product { Name = "Before", Price = 1m, Stock = 1 });
+        var created = await createResponse.Content.ReadFromJsonAsync<Product>();
+
+        var updateResponse = await client.PutAsJsonAsync($"/api/products/{created!.Id}", new UpdateProductRequest("After", "updated", 2m, 9));
+
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<Product>();
+        Assert.Equal("After", updated!.Name);
+        Assert.Equal(9, updated.Stock);
+    }
+
+    [Fact]
+    public async Task Update_UnknownId_ReturnsNotFound()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync($"/api/products/{Guid.NewGuid()}", new UpdateProductRequest("X", "x", 1m, 1));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_ThenGetById_ReturnsNotFound()
+    {
+        var client = factory.CreateClient();
+        var createResponse = await client.PostAsJsonAsync("/api/products", new Product { Name = "ToDelete", Price = 1m, Stock = 1 });
+        var created = await createResponse.Content.ReadFromJsonAsync<Product>();
+
+        var deleteResponse = await client.DeleteAsync($"/api/products/{created!.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var getResponse = await client.GetAsync($"/api/products/{created.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_UnknownId_ReturnsNotFound()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.DeleteAsync($"/api/products/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }

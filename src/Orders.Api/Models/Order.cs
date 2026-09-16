@@ -4,6 +4,7 @@ public class Order
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public OrderStatus Status { get; set; } = OrderStatus.Confirmed;
     public List<OrderItem> Items { get; set; } = [];
 }
 

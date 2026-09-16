@@ -32,4 +32,25 @@ public class ProductsController(IProductService products) : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<Product>> Update(Guid id, UpdateProductRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var updated = await products.UpdateAsync(id, request, ct);
+            return updated is null ? NotFound() : Ok(updated);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var deleted = await products.DeleteAsync(id, ct);
+        return deleted ? NoContent() : NotFound();
+    }
 }

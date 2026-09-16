@@ -8,4 +8,6 @@ public interface INotificationService
     Task<Notification> CreateFromOrderAsync(OrderCreatedEvent evt, CancellationToken ct = default);
     Task<IReadOnlyList<Notification>> GetAllAsync(CancellationToken ct = default);
     Task<Notification?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<bool> MarkAsReadAsync(Guid id, CancellationToken ct = default);
+    Task<bool> DeleteAsync(Guid id, CancellationToken ct = default);
 }

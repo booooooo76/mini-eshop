@@ -78,4 +78,64 @@ public class ReviewServiceTests
         Assert.Equal(0, summary.ReviewCount);
         Assert.Equal(0, summary.AverageRating);
     }
+
+    [Fact]
+    public async Task UpdateAsync_ChangesRatingAndComment()
+    {
+        var db = CreateDb(nameof(UpdateAsync_ChangesRatingAndComment));
+        var service = new ReviewService(db);
+        var review = await service.CreateAsync(new CreateReviewRequest(Guid.NewGuid(), 3, "Ok"));
+
+        var updated = await service.UpdateAsync(review.Id, new UpdateReviewRequest(5, "Actually great"));
+
+        Assert.NotNull(updated);
+        Assert.Equal(5, updated!.Rating);
+        Assert.Equal("Actually great", updated.Comment);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnknownId_ReturnsNull()
+    {
+        var db = CreateDb(nameof(UpdateAsync_UnknownId_ReturnsNull));
+        var service = new ReviewService(db);
+
+        var updated = await service.UpdateAsync(Guid.NewGuid(), new UpdateReviewRequest(5, "x"));
+
+        Assert.Null(updated);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithInvalidRating_Throws()
+    {
+        var db = CreateDb(nameof(UpdateAsync_WithInvalidRating_Throws));
+        var service = new ReviewService(db);
+        var review = await service.CreateAsync(new CreateReviewRequest(Guid.NewGuid(), 3, "Ok"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateAsync(review.Id, new UpdateReviewRequest(0, "bad")));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RemovesReview()
+    {
+        var db = CreateDb(nameof(DeleteAsync_RemovesReview));
+        var service = new ReviewService(db);
+        var review = await service.CreateAsync(new CreateReviewRequest(Guid.NewGuid(), 3, "Ok"));
+
+        var deleted = await service.DeleteAsync(review.Id);
+
+        Assert.True(deleted);
+        Assert.Empty(await service.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnknownId_ReturnsFalse()
+    {
+        var db = CreateDb(nameof(DeleteAsync_UnknownId_ReturnsFalse));
+        var service = new ReviewService(db);
+
+        var deleted = await service.DeleteAsync(Guid.NewGuid());
+
+        Assert.False(deleted);
+    }
 }

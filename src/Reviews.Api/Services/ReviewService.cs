@@ -13,10 +13,7 @@ public class ReviewService(ReviewsDbContext db) : IReviewService
             throw new ArgumentException("A valid productId is required.");
         }
 
-        if (request.Rating is < 1 or > 5)
-        {
-            throw new ArgumentException("Rating must be between 1 and 5.");
-        }
+        ValidateRating(request.Rating);
 
         var review = new Review
         {
@@ -28,6 +25,43 @@ public class ReviewService(ReviewsDbContext db) : IReviewService
         db.Reviews.Add(review);
         await db.SaveChangesAsync(ct);
         return review;
+    }
+
+    public async Task<Review?> UpdateAsync(Guid id, UpdateReviewRequest request, CancellationToken ct = default)
+    {
+        ValidateRating(request.Rating);
+
+        var review = await db.Reviews.FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (review is null)
+        {
+            return null;
+        }
+
+        review.Rating = request.Rating;
+        review.Comment = request.Comment;
+        await db.SaveChangesAsync(ct);
+        return review;
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var review = await db.Reviews.FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (review is null)
+        {
+            return false;
+        }
+
+        db.Reviews.Remove(review);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    private static void ValidateRating(int rating)
+    {
+        if (rating is < 1 or > 5)
+        {
+            throw new ArgumentException("Rating must be between 1 and 5.");
+        }
     }
 
     public async Task<IReadOnlyList<Review>> GetAllAsync(CancellationToken ct = default) =>

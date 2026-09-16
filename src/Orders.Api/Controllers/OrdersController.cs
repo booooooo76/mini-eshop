@@ -32,4 +32,18 @@ public class OrdersController(IOrderService orders) : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpPut("{id:guid}/status")]
+    public async Task<ActionResult<Order>> UpdateStatus(Guid id, UpdateOrderStatusRequest request, CancellationToken ct)
+    {
+        var order = await orders.UpdateStatusAsync(id, request.Status, ct);
+        return order is null ? NotFound() : Ok(order);
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var deleted = await orders.DeleteAsync(id, ct);
+        return deleted ? NoContent() : NotFound();
+    }
 }

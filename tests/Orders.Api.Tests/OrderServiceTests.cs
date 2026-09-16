@@ -61,4 +61,52 @@ public class OrderServiceTests
         await Assert.ThrowsAsync<ArgumentException>(() =>
             service.CreateAsync(new CreateOrderRequest([new CreateOrderItem(Guid.Empty, 1)])));
     }
+
+    [Fact]
+    public async Task UpdateStatusAsync_ChangesStatus()
+    {
+        var db = CreateDb(nameof(UpdateStatusAsync_ChangesStatus));
+        var service = new OrderService(db, new FakeOrderPublisher());
+        var order = await service.CreateAsync(new CreateOrderRequest([new CreateOrderItem(Guid.NewGuid(), 1)]));
+
+        var updated = await service.UpdateStatusAsync(order.Id, OrderStatus.Cancelled);
+
+        Assert.NotNull(updated);
+        Assert.Equal(OrderStatus.Cancelled, updated!.Status);
+    }
+
+    [Fact]
+    public async Task UpdateStatusAsync_UnknownId_ReturnsNull()
+    {
+        var db = CreateDb(nameof(UpdateStatusAsync_UnknownId_ReturnsNull));
+        var service = new OrderService(db, new FakeOrderPublisher());
+
+        var updated = await service.UpdateStatusAsync(Guid.NewGuid(), OrderStatus.Cancelled);
+
+        Assert.Null(updated);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RemovesOrder()
+    {
+        var db = CreateDb(nameof(DeleteAsync_RemovesOrder));
+        var service = new OrderService(db, new FakeOrderPublisher());
+        var order = await service.CreateAsync(new CreateOrderRequest([new CreateOrderItem(Guid.NewGuid(), 1)]));
+
+        var deleted = await service.DeleteAsync(order.Id);
+
+        Assert.True(deleted);
+        Assert.Null(await service.GetByIdAsync(order.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnknownId_ReturnsFalse()
+    {
+        var db = CreateDb(nameof(DeleteAsync_UnknownId_ReturnsFalse));
+        var service = new OrderService(db, new FakeOrderPublisher());
+
+        var deleted = await service.DeleteAsync(Guid.NewGuid());
+
+        Assert.False(deleted);
+    }
 }

@@ -51,4 +51,30 @@ public class OrderService(OrdersDbContext db, IOrderPublisher publisher) : IOrde
 
     public Task<Order?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         db.Orders.Include(o => o.Items).AsNoTracking().FirstOrDefaultAsync(o => o.Id == id, ct);
+
+    public async Task<Order?> UpdateStatusAsync(Guid id, OrderStatus status, CancellationToken ct = default)
+    {
+        var order = await db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id, ct);
+        if (order is null)
+        {
+            return null;
+        }
+
+        order.Status = status;
+        await db.SaveChangesAsync(ct);
+        return order;
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == id, ct);
+        if (order is null)
+        {
+            return false;
+        }
+
+        db.Orders.Remove(order);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
 }

@@ -26,4 +26,30 @@ public class NotificationService(NotificationsDbContext db) : INotificationServi
 
     public Task<Notification?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
         db.Notifications.AsNoTracking().FirstOrDefaultAsync(n => n.Id == id, ct);
+
+    public async Task<bool> MarkAsReadAsync(Guid id, CancellationToken ct = default)
+    {
+        var notification = await db.Notifications.FirstOrDefaultAsync(n => n.Id == id, ct);
+        if (notification is null)
+        {
+            return false;
+        }
+
+        notification.IsRead = true;
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var notification = await db.Notifications.FirstOrDefaultAsync(n => n.Id == id, ct);
+        if (notification is null)
+        {
+            return false;
+        }
+
+        db.Notifications.Remove(notification);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
 }

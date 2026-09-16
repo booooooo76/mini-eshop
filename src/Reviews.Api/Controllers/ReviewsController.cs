@@ -33,4 +33,25 @@ public class ReviewsController(IReviewService reviews) : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<Review>> Update(Guid id, UpdateReviewRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var updated = await reviews.UpdateAsync(id, request, ct);
+            return updated is null ? NotFound() : Ok(updated);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var deleted = await reviews.DeleteAsync(id, ct);
+        return deleted ? NoContent() : NotFound();
+    }
 }

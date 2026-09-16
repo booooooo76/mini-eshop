@@ -70,6 +70,67 @@ public class ProductServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_ChangesFieldsAndInvalidatesCache()
+    {
+        var (db, cache) = CreateDependencies(nameof(UpdateAsync_ChangesFieldsAndInvalidatesCache));
+        var service = new ProductService(db, cache);
+        var product = await service.CreateAsync(new Product { Name = "Old", Price = 1m, Stock = 1 });
+
+        var updated = await service.UpdateAsync(product.Id, new UpdateProductRequest("New", "desc", 2m, 5));
+
+        Assert.NotNull(updated);
+        Assert.Equal("New", updated!.Name);
+        Assert.Equal(2m, updated.Price);
+        Assert.Equal(5, updated.Stock);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnknownId_ReturnsNull()
+    {
+        var (db, cache) = CreateDependencies(nameof(UpdateAsync_UnknownId_ReturnsNull));
+        var service = new ProductService(db, cache);
+
+        var updated = await service.UpdateAsync(Guid.NewGuid(), new UpdateProductRequest("New", "desc", 2m, 5));
+
+        Assert.Null(updated);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithNegativePrice_Throws()
+    {
+        var (db, cache) = CreateDependencies(nameof(UpdateAsync_WithNegativePrice_Throws));
+        var service = new ProductService(db, cache);
+        var product = await service.CreateAsync(new Product { Name = "Old", Price = 1m, Stock = 1 });
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateAsync(product.Id, new UpdateProductRequest("New", "desc", -1m, 5)));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RemovesProduct()
+    {
+        var (db, cache) = CreateDependencies(nameof(DeleteAsync_RemovesProduct));
+        var service = new ProductService(db, cache);
+        var product = await service.CreateAsync(new Product { Name = "ToDelete", Price = 1m, Stock = 1 });
+
+        var deleted = await service.DeleteAsync(product.Id);
+
+        Assert.True(deleted);
+        Assert.Null(await service.GetByIdAsync(product.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnknownId_ReturnsFalse()
+    {
+        var (db, cache) = CreateDependencies(nameof(DeleteAsync_UnknownId_ReturnsFalse));
+        var service = new ProductService(db, cache);
+
+        var deleted = await service.DeleteAsync(Guid.NewGuid());
+
+        Assert.False(deleted);
+    }
+
+    [Fact]
     public async Task GetAllAsync_ServesStaleDataFromCache()
     {
         var (db, cache) = CreateDependencies(nameof(GetAllAsync_ServesStaleDataFromCache));

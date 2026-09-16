@@ -99,12 +99,43 @@ docker compose up -d --build
 | Notifications.Api | `/notifications/api/notifications` | `:8083/api/notifications` |
 | Reviews.Api | `/reviews/api/reviews` | `:8084/api/reviews` |
 
-- **Catalog:** `GET /api/products`, `GET /api/products/{id}`, `POST /api/products` (400 при від'ємній ціні/залишку чи порожній назві)
-- **Orders:** `GET /api/orders`, `GET /api/orders/{id}`, `POST /api/orders` (тіло: `{"items":[{"productId":"...","quantity":2}]}`, 400 при `quantity <= 0` чи порожньому `productId`) — публікує подію, яку забирають Catalog і Notifications
-- **Notifications:** `GET /api/notifications`, `GET /api/notifications/{id}` (лише читання — записи створюються консюмером)
-- **Reviews:** `GET /api/reviews`, `GET /api/reviews/product/{productId}`, `GET /api/reviews/product/{productId}/summary` (кількість відгуків + середній рейтинг), `POST /api/reviews` (тіло: `{"productId":"...","rating":1-5,"comment":"..."}`, 400 при рейтингу поза 1-5)
+- **Catalog:**
+  - `GET /api/products`, `GET /api/products/{id}`
+  - `POST /api/products` — тіло: `{"name":"...","description":"...","price":9.99,"stock":10}`
+  - `PUT /api/products/{id}` — повне оновлення (`UpdateProductRequest`), 404 якщо не знайдено
+  - `DELETE /api/products/{id}` — 204/404
+  - 400 при від'ємній ціні/залишку чи порожній назві (і на створенні, і на оновленні)
+- **Orders:**
+  - `GET /api/orders`, `GET /api/orders/{id}`
+  - `POST /api/orders` — тіло: `{"items":[{"productId":"...","quantity":2}]}` — публікує подію, яку забирають Catalog і Notifications
+  - `PUT /api/orders/{id}/status` — тіло: `{"status":0|1|2}` (`Pending`/`Confirmed`/`Cancelled`), 404 якщо не знайдено
+  - `DELETE /api/orders/{id}` — 204/404 (каскадно видаляє items)
+  - 400 при `quantity <= 0` чи порожньому `productId`
+- **Notifications:**
+  - `GET /api/notifications`, `GET /api/notifications/{id}` (записи створюються лише консюмером RabbitMQ)
+  - `PATCH /api/notifications/{id}/read` — позначити прочитаним, 204/404
+  - `DELETE /api/notifications/{id}` — 204/404
+- **Reviews:**
+  - `GET /api/reviews`, `GET /api/reviews/product/{productId}`, `GET /api/reviews/product/{productId}/summary` (кількість + середній рейтинг)
+  - `POST /api/reviews` — тіло: `{"productId":"...","rating":1-5,"comment":"..."}`
+  - `PUT /api/reviews/{id}` — тіло: `{"rating":1-5,"comment":"..."}` (тільки rating/comment, productId незмінний), 404 якщо не знайдено
+  - `DELETE /api/reviews/{id}` — 204/404
+  - 400 при рейтингу поза 1-5 чи порожньому productId (на створенні)
 
-Кожен `POST`-ендпоінт валідує вхідні дані на рівні сервісу й повертає `400 Bad Request` з описом помилки замість необробленого винятку. `GET /health` на кожному сервісі реально перевіряє з'єднання з його БД (`AddDbContextCheck`), а не просто повертає статичний "healthy".
+Кожен ендпоінт зі вхідними даними валідує їх на рівні сервісу й повертає `400 Bad Request` з описом помилки замість необробленого винятку. `GET /health` на кожному сервісі реально перевіряє з'єднання з його БД (`AddDbContextCheck`), а не просто повертає статичний "healthy".
+
+## Тестові дані (seed)
+
+Усі чотири сервіси стартують із заздалегідь заповненими даними (через EF Core `HasData`, застосовується при `EnsureCreated()`), узгодженими між собою за Guid — зручно одразу тицяти в Swagger, не створюючи все руками:
+
+| Сервіс | Дані |
+|---|---|
+| Catalog | 3 товари: Keyboard, Mouse, Monitor |
+| Orders | 2 замовлення (Confirmed, Cancelled), прив'язані до Keyboard/Mouse |
+| Notifications | 2 сповіщення, по одному на кожне seed-замовлення (одне вже `isRead: true`) |
+| Reviews | 3 відгуки: 2 на Keyboard (rating 5 і 3), 1 на Mouse (rating 4) |
+
+Ці Guid — фіксовані константи в `OnModelCreating` кожного `DbContext`, а не `Guid.NewGuid()` (EF Core вимагає статичні значення для seed-даних). Якщо вже піднімав стек раніше зі старим volume Postgres — `EnsureCreated()` не застосує нову схему/seed до наявної БД, тому після оновлення знадобиться `docker compose down -v` (видаляє том Postgres) перед повторним `up`.
 
 ## Локальний запуск без Docker
 

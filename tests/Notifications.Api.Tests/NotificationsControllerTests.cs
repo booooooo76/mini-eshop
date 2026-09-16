@@ -24,4 +24,24 @@ public class NotificationsControllerTests(NotificationsWebApplicationFactory fac
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    [Fact]
+    public async Task MarkAsRead_UnknownId_ReturnsNotFound()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.PatchAsync($"/api/notifications/{Guid.NewGuid()}/read", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_UnknownId_ReturnsNotFound()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.DeleteAsync($"/api/notifications/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
