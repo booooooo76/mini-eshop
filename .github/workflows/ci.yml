@@ -49,14 +49,12 @@ jobs:
       - name: Code style and formatting (dotnet format)
         run: dotnet format MiniEshop.slnx --verify-no-changes --severity warn --no-restore
 
-      # Аналізатори Roslyn (правила CA) і попередження компілятора вважаються помилками.
-      # NU1903 (відома вразливість Microsoft.OpenApi) лишається попередженням: патч ламає сумісність.
+      # Аналізатори Roslyn (правила CA) і будь-які попередження компілятора вважаються помилками.
       - name: Static analysis (Roslyn analyzers)
         run: >
           dotnet build MiniEshop.slnx -c Release --no-restore
           -p:AnalysisMode=Recommended
           -p:TreatWarningsAsErrors=true
-          -p:WarningsNotAsErrors=NU1903
 
   build-test:
     name: "Build & Test (${{ matrix.service }})"
@@ -92,3 +90,54 @@ jobs:
 
       - name: Test
         run: dotnet test tests/${{ matrix.service }}.Tests/${{ matrix.service }}.Tests.csproj -c Release --no-restore
+
+  # Збірка Docker-образів. Стартує лише після успіху ВСІХ копій lint і build-test (needs);
+  # якщо хоч одна впала, цей job пропускається.
+  images:
+    name: "Image (${{ matrix.image }})"
+    needs: [lint, build-test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: catalog-api
+            dockerfile: src/Catalog.Api/Dockerfile
+          - image: orders-api
+            dockerfile: src/Orders.Api/Dockerfile
+          - image: notifications-api
+            dockerfile: src/Notifications.Api/Dockerfile
+          - image: reviews-api
+            dockerfile: src/Reviews.Api/Dockerfile
+          - image: gateway
+            dockerfile: src/Gateway/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # Образ збирається лише в межах раннера: push: false, публікації немає.
+      # load: true кладе готовий образ у локальний Docker, щоб сканер міг його прочитати.
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          load: true
+          tags: mini-eshop-${{ matrix.image }}:ci
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      # Блокуючий крок: знайдено HIGH/CRITICAL вразливість з наявним виправленням -> job падає.
+      # Дія закріплена за хешем коміту (тег можна переставити, хеш ні).
+      - name: Scan image for vulnerabilities (Trivy)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: mini-eshop-${{ matrix.image }}:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
