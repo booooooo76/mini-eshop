@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using Reviews.Api.Models;
-using Xunit;
 
 namespace Reviews.Api.Tests;
 

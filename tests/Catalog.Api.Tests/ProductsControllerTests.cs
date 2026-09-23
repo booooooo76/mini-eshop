@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using Catalog.Api.Models;
-using Xunit;
 
 namespace Catalog.Api.Tests;
 

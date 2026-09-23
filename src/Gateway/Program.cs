@@ -21,3 +21,7 @@ if (app.Environment.IsDevelopment())
 app.MapReverseProxy();
 
 app.Run();
+
+public partial class Program
+{
+}

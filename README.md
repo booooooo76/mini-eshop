@@ -159,10 +159,35 @@ dotnet test
 
 Юніт-тести бізнес-логіки використовують EF Core InMemory provider і не потребують запущених контейнерів. Інтеграційні тести піднімають застосунок через `WebApplicationFactory`, підміняючи БД на InMemory, Redis-кеш — на in-memory реалізацію, а publisher/consumer RabbitMQ — на фейк, тому теж працюють без Docker.
 
+## CI/CD
+
+![CI](https://github.com/booooooo76/mini-eshop/actions/workflows/ci.yml/badge.svg)
+
+Пайплайн GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) запускається на кожен Pull Request у `master` і на push у `master`:
+
+| Job | Що робить |
+|---|---|
+| `lint` | `dotnet format` (стиль за `.editorconfig`) і збірка з аналізаторами Roslyn, де будь-яке попередження вважається помилкою |
+| `build-test` | Для кожного з 5 сервісів паралельно й незалежно: restore, build, test (кеш NuGet) |
+| `images` | Після успіху двох попередніх: збірка Docker-образу кожного сервісу (без публікації) і сканування Trivy, що блокує знайдені HIGH/CRITICAL вразливості з наявним виправленням |
+| `publish` | Лише на push у `master` (не на Pull Request): публікація образів у GitHub Container Registry з тегами `sha-<коміт>` і `latest` |
+
+Образи лежать у `ghcr.io/booooooo76/mini-eshop-<сервіс>`: `catalog-api`, `orders-api`, `notifications-api`, `reviews-api`, `gateway`.
+
+### Запуск із готових образів
+
+Замість локальної збірки Docker бере образи з реєстру:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d
+```
+
+Конкретна збірка за тегом коміту: `IMAGE_TAG=sha-abc1234 docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d`.
+
 ## Відомі обмеження
 
 - Схема БД створюється через `EnsureCreated()`, а не EF Core-міграції (достатньо для лабораторної, але не для продакшену).
-- `Microsoft.AspNetCore.OpenApi` 10.0.6 тягне вразливу транзитивну залежність `Microsoft.OpenApi` 2.0.0 (NU1903, ReDoS у парсингу). Оновлення до патченої 3.x ламає сумісність з генератором ASP.NET Core (breaking change API). Не є проблемою на практиці — пакет використовується лише для генерації `/openapi` документації, а не для обробки недовіреного вводу.
+- `Microsoft.AspNetCore.OpenApi` 10.0.6 тягне транзитивну залежність `Microsoft.OpenApi` 2.0.0 із відомою вразливістю (CVE-2026-49451, NU1903). Її знайшов Trivy у CI; виправлено явним закріпленням `Microsoft.OpenApi` 2.7.5 у чотирьох API-проєктах (гілка 3.x ламає сумісність з генератором ASP.NET Core, а 2.7.5 сумісна). Якщо `Microsoft.AspNetCore.OpenApi` колись сам почне тягнути патчену версію, закріплення можна прибрати.
 - CORS на всіх чотирьох API дозволений з будь-якого origin (`AllowAnyOrigin`) — потрібно, щоб агрегований Swagger на Gateway міг підвантажити `/openapi/v1.json` з інших портів. Прийнятно для локальної лабораторної роботи, не для продакшену.
 - Postgres опублікований на хостовому порту **5433**, а не стандартному 5432 — на машині розробника вже може працювати нативний (не-Docker) Postgres-сервер на 5432, і Windows непередбачувано маршрутизує з'єднання між ними.
 - `ASPNETCORE_ENVIRONMENT=Development` явно виставлений у docker-compose для всіх сервісів, щоб Swagger UI був доступний і в контейнерах (за замовчуванням .NET-контейнери піднімаються як Production, де Swagger вимкнено).

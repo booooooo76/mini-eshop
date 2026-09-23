@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Orders.Api.Data;
 using Orders.Api.Models;
 using Orders.Api.Services;
-using Xunit;
 
 namespace Orders.Api.Tests;
 

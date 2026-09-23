@@ -69,5 +69,7 @@ public class RabbitMqOrderPublisher(IConfiguration config, ILogger<RabbitMqOrder
         {
             await _connection.CloseAsync();
         }
+
+        GC.SuppressFinalize(this);
     }
 }

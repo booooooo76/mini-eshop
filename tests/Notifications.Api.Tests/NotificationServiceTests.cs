@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Notifications.Api.Data;
 using Notifications.Api.Services;
 using Shared.Contracts;
-using Xunit;
 
 namespace Notifications.Api.Tests;
 

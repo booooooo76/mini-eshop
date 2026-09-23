@@ -4,7 +4,6 @@ using Catalog.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 
 namespace Catalog.Api.Tests;
 
