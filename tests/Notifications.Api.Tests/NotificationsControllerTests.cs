@@ -1,5 +1,4 @@
 using System.Net;
-using Xunit;
 
 namespace Notifications.Api.Tests;
 

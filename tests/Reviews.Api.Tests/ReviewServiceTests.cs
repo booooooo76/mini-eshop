@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Reviews.Api.Data;
 using Reviews.Api.Models;
 using Reviews.Api.Services;
-using Xunit;
 
 namespace Reviews.Api.Tests;
 

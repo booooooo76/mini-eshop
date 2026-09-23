@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using Orders.Api.Models;
-using Xunit;
 
 namespace Orders.Api.Tests;
 

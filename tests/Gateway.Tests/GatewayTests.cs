@@ -1,7 +1,6 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 using Yarp.ReverseProxy.Configuration;
 
 namespace Gateway.Tests;
