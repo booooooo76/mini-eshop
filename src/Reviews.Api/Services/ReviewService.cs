@@ -58,7 +58,7 @@ public class ReviewService(ReviewsDbContext db) : IReviewService
 
     private static void ValidateRating(int rating)
     {
-        if (rating is < 1 or > 5)
+        if (rating is < 1 or > 6)
         {
             throw new ArgumentException("Rating must be between 1 and 5.");
         }

@@ -1,3 +1,4 @@
+using System.Text;
 using Reviews.Api.Models;
 
 namespace Reviews.Api.Services;
