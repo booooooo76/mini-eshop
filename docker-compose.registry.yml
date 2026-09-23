@@ -1,0 +1,30 @@
+# Запуск із готових образів реєстру ghcr.io замість локальної збірки.
+# Використовується разом з основним файлом:
+#   docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d
+# Інший тег, наприклад sha-abc1234:
+#   IMAGE_TAG=sha-abc1234 docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d
+services:
+  catalog-api:
+    image: ghcr.io/booooooo76/mini-eshop-catalog-api:${IMAGE_TAG:-latest}
+    pull_policy: always
+    build: !reset null
+
+  orders-api:
+    image: ghcr.io/booooooo76/mini-eshop-orders-api:${IMAGE_TAG:-latest}
+    pull_policy: always
+    build: !reset null
+
+  notifications-api:
+    image: ghcr.io/booooooo76/mini-eshop-notifications-api:${IMAGE_TAG:-latest}
+    pull_policy: always
+    build: !reset null
+
+  reviews-api:
+    image: ghcr.io/booooooo76/mini-eshop-reviews-api:${IMAGE_TAG:-latest}
+    pull_policy: always
+    build: !reset null
+
+  gateway:
+    image: ghcr.io/booooooo76/mini-eshop-gateway:${IMAGE_TAG:-latest}
+    pull_policy: always
+    build: !reset null

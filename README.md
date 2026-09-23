@@ -159,6 +159,31 @@ dotnet test
 
 Юніт-тести бізнес-логіки використовують EF Core InMemory provider і не потребують запущених контейнерів. Інтеграційні тести піднімають застосунок через `WebApplicationFactory`, підміняючи БД на InMemory, Redis-кеш — на in-memory реалізацію, а publisher/consumer RabbitMQ — на фейк, тому теж працюють без Docker.
 
+## CI/CD
+
+![CI](https://github.com/booooooo76/mini-eshop/actions/workflows/ci.yml/badge.svg)
+
+Пайплайн GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) запускається на кожен Pull Request у `master` і на push у `master`:
+
+| Job | Що робить |
+|---|---|
+| `lint` | `dotnet format` (стиль за `.editorconfig`) і збірка з аналізаторами Roslyn, де будь-яке попередження вважається помилкою |
+| `build-test` | Для кожного з 5 сервісів паралельно й незалежно: restore, build, test (кеш NuGet) |
+| `images` | Після успіху двох попередніх: збірка Docker-образу кожного сервісу (без публікації) і сканування Trivy, що блокує знайдені HIGH/CRITICAL вразливості з наявним виправленням |
+| `publish` | Лише на push у `master` (не на Pull Request): публікація образів у GitHub Container Registry з тегами `sha-<коміт>` і `latest` |
+
+Образи лежать у `ghcr.io/booooooo76/mini-eshop-<сервіс>`: `catalog-api`, `orders-api`, `notifications-api`, `reviews-api`, `gateway`.
+
+### Запуск із готових образів
+
+Замість локальної збірки Docker бере образи з реєстру:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d
+```
+
+Конкретна збірка за тегом коміту: `IMAGE_TAG=sha-abc1234 docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d`.
+
 ## Відомі обмеження
 
 - Схема БД створюється через `EnsureCreated()`, а не EF Core-міграції (достатньо для лабораторної, але не для продакшену).

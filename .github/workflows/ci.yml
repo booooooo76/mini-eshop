@@ -141,3 +141,65 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+
+  # Публікація образів у GitHub Container Registry (ghcr.io).
+  # Лише для push (на Pull Request пропускається) і лише після успіху images (тобто після сканування).
+  publish:
+    name: "Publish (${{ matrix.image }})"
+    needs: images
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # Права цього job: читати код і писати пакети. Інші job лишаються з мінімальними правами.
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: catalog-api
+            dockerfile: src/Catalog.Api/Dockerfile
+          - image: orders-api
+            dockerfile: src/Orders.Api/Dockerfile
+          - image: notifications-api
+            dockerfile: src/Notifications.Api/Dockerfile
+          - image: reviews-api
+            dockerfile: src/Reviews.Api/Dockerfile
+          - image: gateway
+            dockerfile: src/Gateway/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # Вхід у реєстр тимчасовим токеном цього запуску: пароль у репозиторії не зберігається.
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Формує теги й мітки образу: sha-<коміт> завжди, latest тільки для основної гілки.
+      - name: Generate tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/mini-eshop-${{ matrix.image }}
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Шари беруться з кешу, який заповнив job images, тож збірка тут швидка.
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          provenance: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.image }}
