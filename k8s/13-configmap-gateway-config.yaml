@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+  namespace: mini-eshop
+data:
+  SwaggerAggregator__Endpoints__0__Url: /catalog/openapi/v1.json
+  SwaggerAggregator__Endpoints__1__Url: /orders/openapi/v1.json
+  SwaggerAggregator__Endpoints__2__Url: /notifications/openapi/v1.json
+  SwaggerAggregator__Endpoints__3__Url: /reviews/openapi/v1.json
