@@ -37,6 +37,12 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapGet("/info", () => Results.Ok(new
+{
+    service = "reviews-api",
+    version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev",
+    pod = Environment.MachineName
+}));
 
 app.Run();
 

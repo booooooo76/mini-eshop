@@ -163,14 +163,14 @@ dotnet test
 
 ![CI](https://github.com/booooooo76/mini-eshop/actions/workflows/ci.yml/badge.svg)
 
-Пайплайн GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) запускається на кожен Pull Request у `master` і на push у `master`:
+Пайплайн GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) запускається на кожен Pull Request у `master`, на push у `master` і на push git-тегу виду `vX.Y.Z`:
 
 | Job | Що робить |
 |---|---|
 | `lint` | `dotnet format` (стиль за `.editorconfig`) і збірка з аналізаторами Roslyn, де будь-яке попередження вважається помилкою |
 | `build-test` | Для кожного з 5 сервісів паралельно й незалежно: restore, build, test (кеш NuGet) |
 | `images` | Після успіху двох попередніх: збірка Docker-образу кожного сервісу (без публікації) і сканування Trivy, що блокує знайдені HIGH/CRITICAL вразливості з наявним виправленням |
-| `publish` | Лише на push у `master` (не на Pull Request): публікація образів у GitHub Container Registry з тегами `sha-<коміт>` і `latest` |
+| `publish` | Лише на push (не на Pull Request): публікація образів у GitHub Container Registry з тегами `sha-<коміт>`, `latest` (лише з `master`) і `X.Y.Z` (лише для git-тегу `vX.Y.Z`) |
 
 Образи лежать у `ghcr.io/booooooo76/mini-eshop-<сервіс>`: `catalog-api`, `orders-api`, `notifications-api`, `reviews-api`, `gateway`.
 
@@ -183,6 +183,10 @@ docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d
 ```
 
 Конкретна збірка за тегом коміту: `IMAGE_TAG=sha-abc1234 docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d`.
+
+### Версії образів
+
+Версійні образи з'являються, коли в репозиторій запушено git-тег: `git tag v1.0.0 && git push origin v1.0.0` дає образи `ghcr.io/booooooo76/mini-eshop-<сервіс>:1.0.0`. Версія вшита в образ (build-arg `APP_VERSION`) і видна в `GET /info` кожного сервісу разом з іменем пода (`{"service":"gateway","version":"1.0.0","pod":"..."}`). Для Kubernetes (Лаба №3) використовуються лише такі версійні теги, `latest` не застосовується.
 
 ## Відомі обмеження
 
