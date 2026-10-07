@@ -6,6 +6,12 @@ builder.Services.AddReverseProxy()
 var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapGet("/info", () => Results.Ok(new
+{
+    service = "gateway",
+    version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev",
+    pod = Environment.MachineName
+}));
 
 if (app.Environment.IsDevelopment())
 {
