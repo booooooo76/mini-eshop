@@ -1,0 +1,25 @@
+config:
+  environment: Production
+  logLevel: Warning
+
+image:
+  tag: "1.0.0"
+
+app:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+postgres:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+ingress:
+  enabled: true

@@ -44,6 +44,7 @@ PostgreSQL Redis      PostgreSQL              PostgreSQL           PostgreSQL
 - **Тести:** xUnit, EF Core InMemory provider, `WebApplicationFactory` для інтеграційних тестів
 - **Контейнеризація:** multi-stage Dockerfile на сервіс + docker-compose
 - **Оркестрація:** Kubernetes (minikube), маніфести в `k8s/`
+- **Пакування:** Helm 3, чарт у `helm/mini-eshop/`
 
 ## Структура проєкту
 
@@ -59,6 +60,7 @@ mini-eshop/
 ├── tests/                    # юніт + інтеграційні тести на кожен сервіс
 ├── infra/postgres/           # init-скрипт для створення кількох БД в одному Postgres
 ├── k8s/                      # маніфести Kubernetes (по одному файлу на об'єкт)
+├── helm/mini-eshop/          # Helm-чарт: ті самі об'єкти у вигляді шаблонів
 ├── docker-compose.yml
 └── MiniEshop.slnx
 ```
@@ -287,6 +289,119 @@ kubectl rollout undo deployment/reviews-api
 - У Swagger через Gateway документація всіх сервісів завантажується, але «Try it out» не працює: у специфікації адреса сервера `http://catalog-api:8080/`, яку знає лише кластер.
 - Service розподіляє навантаження за з'єднаннями, а не за запитами, тому між двома репліками Catalog розкид нерівномірний (приблизно 2:1 у вимірюванні).
 - minikube встановив Kubernetes 1.37, а kubectl має версію 1.34, тобто поза офіційним допуском ±1; для наших команд це не заважало.
+
+## Helm-чарт
+
+Ті самі об'єкти Kubernetes, що в `k8s/`, пакуються в Helm-чарт [helm/mini-eshop/](helm/mini-eshop/): жорстко прописані значення (кількість реплік, тег образу, ресурси) винесені в `values.yaml`, а імена об'єктів будуються від імені релізу, тож чарт можна встановити кілька разів в один кластер. Потрібен Helm 3.
+
+### Версії: `version` і `appVersion`
+
+У `Chart.yaml` є два номери, і вони змінюються незалежно:
+
+| Поле | Що означає | Приклад у цьому проєкті |
+|---|---|---|
+| `version` | версія самого чарта, тобто «упаковки»: шаблонів, значень, структури. Це SemVer; піднімається, коли змінюється чарт | `0.1.0` |
+| `appVersion` | версія застосунку, який чарт розгортає, тобто тег образів `mini-eshop-*` у ghcr.io | `1.1.0` |
+
+Приклад: щоб випустити нову версію застосунку (`1.2.0`) без змін у шаблонах, міняється лише `appVersion` (чарт при цьому теж отримує нову `version`, бо змінився його вміст). Навпаки, якщо в шаблоні виправлена помилка, а застосунок той самий, піднімається `version`, а `appVersion` лишається `1.1.0`. За замовчуванням чарт бере тег образів із `appVersion`. Колонка `APP VERSION` у `helm list` і `helm history` показує саме `appVersion` чарта, а не тег, що реально працює (він видно в `GET /info`).
+
+### Склад чарта
+
+```
+helm/mini-eshop/
+├── Chart.yaml              # назва, опис, version, appVersion
+├── values.yaml             # значення за замовчуванням (відповідають розробці)
+├── values-dev.yaml         # середовище розробки
+├── values-prod.yaml        # «промислове» середовище
+├── files/init-multiple-dbs.sh   # скрипт створення баз (копія infra/postgres/)
+└── templates/
+    ├── _helpers.tpl        # імена, мітки, образ, init-контейнер wait-for-deps
+    ├── NOTES.txt           # підказка після встановлення
+    ├── configmap-*.yaml, secret.yaml
+    ├── postgres-*.yaml, rabbitmq-*.yaml, redis-*.yaml
+    ├── catalog-api-*.yaml, orders-api-*.yaml, notifications-api-*.yaml, reviews-api-*.yaml, gateway-*.yaml
+    ├── ingress.yaml        # створюється лише при ingress.enabled
+    ├── hooks/pre-upgrade-job.yaml    # хук: перевірка БД перед оновленням
+    └── tests/test-connection.yaml    # helm test
+```
+
+Чарт дає ті самі 23 об'єкти, що й `k8s/` (без Namespace: його створює `--create-namespace`). Імена об'єктів будуються від імені релізу (`<реліз>-mini-eshop-<компонент>`), тож чарт можна поставити кілька разів в один кластер.
+
+### Встановлення
+
+Пароль Postgres у репозиторії не зберігається: чарт відмовляється працювати без `secrets.postgresPassword`. Його передають при встановленні (у реальному проєкті з менеджера секретів, тут для навчального кластера просто значення).
+
+Середовище розробки (1 репліка, образи `1.1.0`, без Ingress):
+
+```bash
+helm install dev helm/mini-eshop -f helm/mini-eshop/values-dev.yaml --set secrets.postgresPassword=<пароль> -n eshop-dev --create-namespace --wait
+```
+
+Промислове середовище (2 репліки, образи `1.0.0`, з Ingress, `Production`):
+
+```bash
+helm install prod helm/mini-eshop -f helm/mini-eshop/values-prod.yaml --set secrets.postgresPassword=<пароль> -n eshop-prod --create-namespace --wait
+```
+
+Обидва можна тримати в одному кластері одночасно. Доступ: у `prod` через Ingress (`minikube tunnel`, потім `http://127.0.0.1/info`), у `dev` через `kubectl port-forward -n eshop-dev svc/dev-mini-eshop-gateway 8080:8080`. Підказку з точними командами Helm друкує після встановлення (`helm status <реліз> -n <namespace>`). Два Ingress з однаковим хостом і шляхом `/` можуть конфліктувати (ingress-nginx може відхилити другий), тому в `dev` Ingress вимкнений, а за потреби йому задають окремий `ingress.host`.
+
+Перевірка без встановлення: `helm lint helm/mini-eshop --set secrets.postgresPassword=x` і `helm template <реліз> helm/mini-eshop -f <файл значень> --set secrets.postgresPassword=x`.
+
+### Параметри `values`
+
+Пріоритет (від слабшого до сильнішого): `values.yaml` → файли `-f` (пізніший перемагає) → `--set`.
+
+| Параметр | За замовчуванням | dev | prod | Призначення |
+|---|---|---|---|---|
+| `image.repository` | `ghcr.io/booooooo76/mini-eshop` | | | спільний префікс образів сервісів (`<префікс>-catalog-api` тощо) |
+| `image.tag` | `""` (бере `appVersion`) | `1.1.0` | `1.0.0` | тег образів застосунку |
+| `image.pullPolicy` | `IfNotPresent` | | | політика завантаження образів |
+| `config.environment` | `Development` | `Development` | `Production` | `ASPNETCORE_ENVIRONMENT` (у `Development` доступний Swagger) |
+| `config.logLevel` | `Information` | `Information` | `Warning` | рівень логів застосунку |
+| `secrets.postgresUser` | `postgres` | | | користувач Postgres |
+| `secrets.postgresPassword` | `""` (обов'язково) | `--set` | `--set` | пароль Postgres; з нього складаються рядки підключення |
+| `app.replicas` | `1` | `1` | `2` | реплік кожного з 5 сервісів |
+| `app.resources` | requests `25m/64Mi`, limits `250m/256Mi` | те саме | requests `100m/128Mi`, limits `500m/384Mi` | CPU і пам'ять сервісів |
+| `app.service.type`, `app.service.port` | `ClusterIP`, `8080` | | | Service сервісів |
+| `app.preStopSleepSeconds` | `10` | | | пауза перед зупинкою пода (щоб Ingress встиг його прибрати) |
+| `postgres.replicas`, `rabbitmq.replicas`, `redis.replicas` | `1` | | | не збільшувати: база й черга не масштабуються реплікою |
+| `postgres.image`, `rabbitmq.image`, `redis.image`, `waitForDeps.image` | `postgres:16-alpine`, `rabbitmq:3-management-alpine`, `redis:7-alpine`, `busybox:1.37.0` | | | образи інфраструктури |
+| `postgres.resources` | requests `50m/128Mi`, limits `500m/512Mi` | | requests `100m/256Mi` | ресурси Postgres (зміна перезапускає базу: стратегія `Recreate`) |
+| `rabbitmq.resources`, `redis.resources`, `waitForDeps.resources` | див. `values.yaml` | | | ресурси решти компонентів |
+| `postgres.persistence.*`, `rabbitmq.persistence.*` | `enabled: true`, `size: 1Gi`, `storageClass: ""` | | | PVC; при `enabled: false` диск стає `emptyDir` |
+| `ingress.enabled` | `false` | `false` | `true` | створити Ingress |
+| `ingress.className`, `ingress.host` | `nginx`, `""` | | | клас і необов'язковий хост Ingress |
+| `hooks.preUpgradeCheck.enabled` | `true` | | | хук перед оновленням |
+| `tests.enabled` | `true` | | | под для `helm test` |
+| `nameOverride`, `fullnameOverride` | `""` | | | зміна назви в іменах об'єктів |
+
+### Життєвий цикл релізу
+
+```bash
+helm upgrade dev helm/mini-eshop -f helm/mini-eshop/values-dev.yaml --set secrets.postgresPassword=<пароль> --set image.tag=1.0.0 -n eshop-dev --wait   # оновлення
+helm upgrade dev helm/mini-eshop -f helm/mini-eshop/values-prod.yaml --set secrets.postgresPassword=<пароль> -n eshop-dev --wait                    # з файлом іншого середовища
+helm history dev -n eshop-dev                  # ревізії
+helm get values dev -n eshop-dev --revision 2  # значення конкретної ревізії
+helm rollback dev 2 -n eshop-dev --wait        # відкат (з'являється нова ревізія "Rollback to 2")
+helm test dev -n eshop-dev                     # перевірка працездатності
+helm uninstall dev -n eshop-dev                # видалення (разом з PVC)
+```
+
+Під час `upgrade` потрібно знову передати `-f` і пароль (інакше значення візьмуться з `values.yaml`). У шаблони Deployment вбудований відбиток ConfigMap і Secret (`checksum/...`): після зміни налаштувань поди перезапускаються самі.
+
+### Хук і тест
+
+- **Хук `pre-upgrade`** ([pre-upgrade-job.yaml](helm/mini-eshop/templates/hooks/pre-upgrade-job.yaml)) перед кожним оновленням запускає Job, який до 30 с чекає на порт Postgres. Якщо бази немає, `helm upgrade` завершується помилкою `pre-upgrade hooks failed`, а сервіси не чіпаються (у `helm history` лишається ревізія зі статусом `failed`). Успішний Job видаляється сам.
+- **`helm test <реліз> -n <namespace>`** ([test-connection.yaml](helm/mini-eshop/templates/tests/test-connection.yaml)) запускає под, який через Gateway звертається до `/info` усіх п'яти сервісів і перевіряє, що працює очікувана версія. Под видаляється після успіху, тому прапорець `--logs` логів не покаже (див. звіт про Лабу №4).
+
+### Особливості чарта
+
+- Стан релізу Helm зберігає в Secret `sh.helm.release.v1.<реліз>.v<ревізія>` у namespace релізу. Туди потрапляють і значення, передані через `--set`, зокрема пароль: доступ до таких Secret треба обмежувати.
+- Пароль Postgres запам'ятовується базою при першому створенні (`PGDATA`). Зміна `secrets.postgresPassword` під час `upgrade` змінить рядки підключення, але не пароль у вже створеній базі.
+- Зміна ресурсів Postgres перезапускає базу (стратегія `Recreate`, диск PVC зберігається). Сервіси на цей час втрачають з'єднання; під час таких перезапусків `catalog-api` і `notifications-api` бували перезапущені самим Kubernetes.
+- `helm uninstall` не видаляє namespace, створений через `--create-namespace`; його видаляють окремо (`kubectl delete namespace`).
+- Kubernetes-імена об'єктів містять ім'я релізу, тому Gateway отримує адреси сервісів не з `appsettings.json`, а зі змінних оточення з ConfigMap `<реліз>-mini-eshop-gateway-config`.
+- Обмеження з розділу «Розгортання в Kubernetes» (гонка `EnsureCreated()`, «Try it out» у Swagger) діють і тут.
 
 ## Відомі обмеження
 
