@@ -45,6 +45,11 @@ app.MapGet("/info", () => Results.Ok(new
     version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev",
     pod = Environment.MachineName
 }));
+app.MapGet("/version", () => Results.Ok(new
+{
+    service = "notifications-api",
+    version = Environment.GetEnvironmentVariable("APP_VERSION") ?? "dev"
+}));
 
 app.Run();
 
