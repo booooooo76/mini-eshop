@@ -190,7 +190,7 @@ docker compose -f docker-compose.yml -f docker-compose.registry.yml up -d
 
 ### Версії образів
 
-Версійні образи з'являються, коли в репозиторій запушено git-тег: `git tag v1.0.0 && git push origin v1.0.0` дає образи `ghcr.io/booooooo76/mini-eshop-<сервіс>:1.0.0`. Версія вшита в образ (build-arg `APP_VERSION`) і видна в `GET /info` кожного сервісу разом з іменем пода (`{"service":"gateway","version":"1.0.0","pod":"..."}`). Для Kubernetes (Лаба №3) використовуються лише такі версійні теги, `latest` не застосовується.
+Версійні образи з'являються, коли в репозиторій запушено git-тег: `git tag v1.0.0 && git push origin v1.0.0` дає образи `ghcr.io/booooooo76/mini-eshop-<сервіс>:1.0.0`. Версія вшита в образ (build-arg `APP_VERSION`) і видна в `GET /info` кожного сервісу разом з іменем пода (`{"service":"gateway","version":"1.0.0","pod":"..."}`). З версії `1.2.0` є ще `GET /version` лише з назвою сервісу й версією (`{"service":"gateway","version":"1.2.0"}`). Для Kubernetes (Лаба №3) використовуються лише такі версійні теги, `latest` не застосовується.
 
 ## Розгортання в Kubernetes (minikube)
 
@@ -226,6 +226,7 @@ minikube tunnel
 | Адреса | Що це |
 |---|---|
 | `/info` | Gateway: версія образу та ім'я пода, що відповів |
+| `/version` | Gateway: лише версія образу (з `1.2.0`); `/catalog/version` тощо для інших сервісів |
 | `/catalog/api/products`, `/orders/api/orders`, `/notifications/api/notifications`, `/reviews/api/reviews` | API сервісів через Gateway |
 | `/swagger` | агрегований Swagger (документація завантажується, «Try it out» не працює, див. нижче) |
 
