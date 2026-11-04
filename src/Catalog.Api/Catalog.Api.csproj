@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shared.Contracts\Shared.Contracts.csproj" />
+    <ProjectReference Include="..\Shared.Observability\Shared.Observability.csproj" />
   </ItemGroup>
 
 </Project>

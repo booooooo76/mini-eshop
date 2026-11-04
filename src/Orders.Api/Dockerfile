@@ -2,10 +2,12 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["src/Orders.Api/Orders.Api.csproj", "src/Orders.Api/"]
+COPY ["src/Shared.Observability/Shared.Observability.csproj", "src/Shared.Observability/"]
 COPY ["src/Shared.Contracts/Shared.Contracts.csproj", "src/Shared.Contracts/"]
 RUN dotnet restore "src/Orders.Api/Orders.Api.csproj"
 
 COPY src/Orders.Api/ src/Orders.Api/
+COPY src/Shared.Observability/ src/Shared.Observability/
 COPY src/Shared.Contracts/ src/Shared.Contracts/
 WORKDIR /src/src/Orders.Api
 RUN dotnet publish -c Release -o /app/publish --no-restore

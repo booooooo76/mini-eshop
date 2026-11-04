@@ -2,9 +2,11 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["src/Reviews.Api/Reviews.Api.csproj", "src/Reviews.Api/"]
+COPY ["src/Shared.Observability/Shared.Observability.csproj", "src/Shared.Observability/"]
 RUN dotnet restore "src/Reviews.Api/Reviews.Api.csproj"
 
 COPY src/Reviews.Api/ src/Reviews.Api/
+COPY src/Shared.Observability/ src/Shared.Observability/
 WORKDIR /src/src/Reviews.Api
 RUN dotnet publish -c Release -o /app/publish --no-restore
 

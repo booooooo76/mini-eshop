@@ -56,7 +56,8 @@ mini-eshop/
 │   ├── Notifications.Api/    # консюмер подій замовлень + REST-історія сповіщень
 │   ├── Reviews.Api/          # відгуки на товари (проста REST CRUD, без месенджингу)
 │   ├── Gateway/              # YARP reverse proxy + агрегований Swagger
-│   └── Shared.Contracts/     # спільні DTO подій
+│   ├── Shared.Contracts/     # спільні DTO подій
+│   └── Shared.Observability/ # /metrics, JSON-логи, FAIL_RATE (спільне для всіх сервісів)
 ├── tests/                    # юніт + інтеграційні тести на кожен сервіс
 ├── infra/postgres/           # init-скрипт для створення кількох БД в одному Postgres
 ├── k8s/                      # маніфести Kubernetes (по одному файлу на об'єкт)
@@ -403,6 +404,18 @@ helm uninstall dev -n eshop-dev                # видалення (разом 
 - `helm uninstall` не видаляє namespace, створений через `--create-namespace`; його видаляють окремо (`kubectl delete namespace`).
 - Kubernetes-імена об'єктів містять ім'я релізу, тому Gateway отримує адреси сервісів не з `appsettings.json`, а зі змінних оточення з ConfigMap `<реліз>-mini-eshop-gateway-config`.
 - Обмеження з розділу «Розгортання в Kubernetes» (гонка `EnsureCreated()`, «Try it out» у Swagger) діють і тут.
+
+## Спостережуваність (метрики й логи)
+
+Усі п'ять сервісів підключають бібліотеку `Shared.Observability` двома рядками в `Program.cs` (`builder.AddObservability()` і `app.UseObservability()`).
+
+- **Метрики** віддаються на `GET /metrics` у форматі Prometheus (`prometheus-net`): лічильник `http_requests_total` і гістограма `http_request_duration_seconds`, обидві з мітками `method`, `route`, `status`. `route` — це шаблон маршруту (`api/products/{id}`, а не `/api/products/1111…`), а невідомі шляхи потрапляють у `route="unmatched"`, тому кількість часових рядів не росте від id чи сміттєвих URL. Запити до самого `/metrics` не рахуються.
+- **Логи** пишуться в stdout по одному JSON-рядку: `time`, `level`, `category`, `message` і поля шаблону повідомлення. На кожен запит є рядок з `method`, `route`, `status`, `duration_ms` (рівень `error` для 5xx, `warn` для 4xx). Проби `/health` у логи не потрапляють, але рахуються в метриках.
+- **`FAIL_RATE`** (змінна оточення, від `0` до `1`, за замовчуванням `0`) — частка запитів, на які сервіс навмисно відповідає `500`. Потрібна для демонстрації автоматичного відкату за метриками. `/health` і `/metrics` вона не зачіпає, тому под лишається Ready.
+
+```bash
+curl -s localhost:8080/metrics | grep http_requests_total
+```
 
 ## Відомі обмеження
 
