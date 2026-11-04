@@ -5,7 +5,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddObservability();
 
 builder.Services.AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
+    .ConfigureHttpClient((_, handler) => handler.PooledConnectionLifetime = TimeSpan.FromSeconds(5));
 
 var app = builder.Build();
 
