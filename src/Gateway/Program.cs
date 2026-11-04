@@ -1,9 +1,15 @@
+using Shared.Observability;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddObservability();
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
 var app = builder.Build();
+
+app.UseObservability();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapGet("/info", () => Results.Ok(new

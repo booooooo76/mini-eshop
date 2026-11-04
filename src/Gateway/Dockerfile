@@ -2,9 +2,11 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["src/Gateway/Gateway.csproj", "src/Gateway/"]
+COPY ["src/Shared.Observability/Shared.Observability.csproj", "src/Shared.Observability/"]
 RUN dotnet restore "src/Gateway/Gateway.csproj"
 
 COPY src/Gateway/ src/Gateway/
+COPY src/Shared.Observability/ src/Shared.Observability/
 WORKDIR /src/src/Gateway
 RUN dotnet publish -c Release -o /app/publish --no-restore
 

@@ -6,6 +6,7 @@
     <Project Path="src/Orders.Api/Orders.Api.csproj" />
     <Project Path="src/Reviews.Api/Reviews.Api.csproj" />
     <Project Path="src/Shared.Contracts/Shared.Contracts.csproj" />
+    <Project Path="src/Shared.Observability/Shared.Observability.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Catalog.Api.Tests/Catalog.Api.Tests.csproj" />

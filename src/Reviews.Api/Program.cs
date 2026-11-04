@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Reviews.Api.Data;
 using Reviews.Api.Services;
+using Shared.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddObservability();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -27,6 +30,7 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
 }
 
+app.UseObservability();
 app.UseCors();
 
 if (app.Environment.IsDevelopment())
