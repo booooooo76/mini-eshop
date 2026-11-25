@@ -1,0 +1,11 @@
+services:
+  localstack:
+    image: localstack/localstack:4.14.0
+    container_name: mini-eshop-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      SERVICES: lambda,apigateway,dynamodb,iam,logs,sts
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
