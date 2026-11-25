@@ -1,0 +1,31 @@
+### Replace the API id with the one printed by deploy.sh (also in build/api-url.txt)
+@base = http://localhost:4566/restapis/REPLACE_API_ID/dev/_user_request_
+
+### Create a review
+# @name created
+POST {{base}}/reviews
+Content-Type: application/json
+
+{
+  "productId": "11111111-1111-1111-1111-111111111111",
+  "rating": 5,
+  "comment": "Great keyboard"
+}
+
+### List all reviews
+GET {{base}}/reviews
+
+### List reviews of one product
+GET {{base}}/reviews?productId=11111111-1111-1111-1111-111111111111
+
+### Get the created review
+GET {{base}}/reviews/{{created.response.body.id}}
+
+### Delete the created review
+DELETE {{base}}/reviews/{{created.response.body.id}}
+
+### Invalid rating -> 400
+POST {{base}}/reviews
+Content-Type: application/json
+
+{ "productId": "11111111-1111-1111-1111-111111111111", "rating": 9 }

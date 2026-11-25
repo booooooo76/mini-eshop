@@ -62,6 +62,7 @@ mini-eshop/
 ├── infra/postgres/           # init-скрипт для створення кількох БД в одному Postgres
 ├── k8s/                      # маніфести Kubernetes (по одному файлу на об'єкт)
 ├── helm/mini-eshop/          # Helm-чарт: ті самі об'єкти у вигляді шаблонів
+├── serverless/               # відгуки як AWS Lambda + API Gateway + DynamoDB у LocalStack
 ├── docker-compose.yml
 └── MiniEshop.slnx
 ```
@@ -415,6 +416,14 @@ helm uninstall dev -n eshop-dev                # видалення (разом 
 
 ```bash
 curl -s localhost:8080/metrics | grep http_requests_total
+```
+
+## Serverless-версія відгуків (LocalStack)
+
+У папці `serverless/` лежить адаптація `Reviews.Api` для AWS Lambda: Python-функція за Amazon API Gateway, дані в Amazon DynamoDB, усе розгортається локально в LocalStack одним скриптом AWS CLI. Опис архітектури, послідовність розгортання й обмеження — у [`serverless/README.md`](serverless/README.md).
+
+```bash
+cd serverless && docker compose up -d && bash deploy.sh && bash test-api.sh
 ```
 
 ## Відомі обмеження
